@@ -21,17 +21,21 @@ const ALLOWED_FILE_TYPES = [
 // Maximum file size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+// Helper function to add CORS headers
+function addCorsHeaders(response: NextResponse): NextResponse {
+  response.headers.set('Access-Control-Allow-Origin', '*');
+  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  return response;
+}
+
 export async function POST(request: NextRequest) {
   // Handle CORS preflight requests
   if (request.method === 'OPTIONS') {
-    return new NextResponse(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    return addCorsHeaders(
+      new NextResponse(null, { status: 200 })
+    );
   }
 
   try {
@@ -39,32 +43,38 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
+      return addCorsHeaders(
+        NextResponse.json(
+          { error: 'No file provided' },
+          { status: 400 }
+        )
       );
     }
 
     // Validate file type
     if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { 
-          error: 'File type not allowed',
-          allowedTypes: ALLOWED_FILE_TYPES 
-        },
-        { status: 400 }
+      return addCorsHeaders(
+        NextResponse.json(
+          { 
+            error: 'File type not allowed',
+            allowedTypes: ALLOWED_FILE_TYPES 
+          },
+          { status: 400 }
+        )
       );
     }
 
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { 
-          error: 'File too large',
-          maxSize: MAX_FILE_SIZE,
-          currentSize: file.size
-        },
-        { status: 400 }
+      return addCorsHeaders(
+        NextResponse.json(
+          { 
+            error: 'File too large',
+            maxSize: MAX_FILE_SIZE,
+            currentSize: file.size
+          },
+          { status: 400 }
+        )
       );
     }
 
@@ -95,26 +105,16 @@ export async function POST(request: NextRequest) {
       url: `/uploads/${fileName}`
     });
 
-    // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-
-    return response;
+    return addCorsHeaders(response);
 
   } catch (error) {
     console.error('Upload error:', error);
-    const errorResponse = NextResponse.json(
-      { error: 'Failed to upload file' },
-      { status: 500 }
+    return addCorsHeaders(
+      NextResponse.json(
+        { error: 'Failed to upload file' },
+        { status: 500 }
+      )
     );
-    
-    // Add CORS headers to error response
-    errorResponse.headers.set('Access-Control-Allow-Origin', '*');
-    errorResponse.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    errorResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-    
-    return errorResponse;
   }
 }
 
@@ -127,10 +127,5 @@ export async function GET() {
     maxFileSizeMB: MAX_FILE_SIZE / (1024 * 1024)
   });
 
-  // Add CORS headers
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-
-  return response;
+  return addCorsHeaders(response);
 }
